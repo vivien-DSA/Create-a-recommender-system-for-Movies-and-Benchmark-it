@@ -16,54 +16,6 @@ from surprise import accuracy
 from surprise.model_selection import train_test_split
 from surprise.prediction_algorithms.knns import KNNBasic
 
-################################################## RETRIEVE TOP MOVIES AND RECOMMENDATIONS################################################
-
-def get_top_n(predictions, n=10) -> defaultdict:
-    """Return the top-N recommendation for each user from a set of predictions.
-
-    Args:
-        predictions(list of Prediction objects): The list of predictions, as
-            returned by the test method of an algorithm.
-        n(int): The number of recommendation to output for each user. Default
-            is 10.
-
-    Returns:
-    A dict where keys are user (raw) ids and values are lists of tuples:
-        [(raw item id, rating estimation), ...] of size n.
-    """
-    # First map the predictions to each user.
-    top_n = defaultdict(list)
-    for uid, iid, true_r, est, _ in predictions:
-        top_n[uid].append((iid, est))
-
-    # Then sort the predictions for each user and retrieve the k highest ones.
-    for uid, user_ratings in top_n.items():
-        user_ratings.sort(key=lambda x: x[1], reverse=True)
-        top_n[uid] = user_ratings[:n]
-    return top_n
-
-def create_top_n_dataframe(top_n, data):
-    # Save the top_n in a data frame    
-    dataf = pd.DataFrame()
-    # To retrieve the true rating we will check on the test result
-    test_a = np.array(data)
-    for uid, user_ratings in top_n.items():
-        for m, r in user_ratings:
-            tr = test_a[(test_a[:,0] == uid) & (test_a[:,1] == m)].item(2)
-            dataf = pd.concat([dataf, pd.DataFrame([[int(uid), int(m), round(r, 2), tr]],
-                                               columns = ['UserId', 'movieId', 'PredictedRating', 'TrueRating'])],
-                          ignore_index=True)
-    return dataf
-
-def create_recommendation_dataframe(top_n_df, userId):
-    movies_recom_all_users = top_n_df.merge(movies, how='left', on=['movieId'])
-    output = movies_recom_all_users[movies_recom_all_users['UserId'] == userId].drop(columns = ['UserId', 'movieId'])
-    cols = ['title', 'genres', 'PredictedRating', 'TrueRating']
-    output = output[cols]
-    return output
-
-#####################################################################################################################
-
 
 ###############################################LOAD THE DATA ########################################################
 
